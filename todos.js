@@ -1,6 +1,8 @@
 Todos = new Mongo.Collection('todos');
 
 if (Meteor.isClient) {
+  Meteor.subscribe('todos');
+
   // Template helpers
   Template.main.helpers({
     todos: function () {
@@ -38,6 +40,16 @@ if (Meteor.isClient) {
   });
 }
 
+if (Meteor.isServer) {
+  Meteor.publish('todos', function() {
+    if (!this.userId) {
+      return Todos.find();
+    } else {
+      return Todos.find({userId: this.userId});
+    }
+  });
+}
+
 // Methods should be created after removing insecure package.
 // Methods are similar to above written events.
 // After completing the methods section you should change the events by below mentioned methods.
@@ -50,18 +62,22 @@ Meteor.methods({
     Todos.insert({
         text: text,
         createdAt: new Date(),
-        userID: Meteor.userId(),
+        userId: Meteor.userId(),
         username: Meteor.user().username
     });
   },
   deleteTodo: function(todoId){
+    var todo = Todos.findOne(todoId);
+    if (todo.userId !== Meteor.userId()) {
+      throw new Meteor.Error('not-authorized');
+    }
     Todos.remove(todoId);
   },
-  setChecked: function(todoID, setChecked){
-    Todos.update(todoID, {$set:{checked: setChecked}});
+  setChecked: function(todoId, setChecked){
+    var todo = Todos.findOne(todoId);
+    if (todo.userId !== Meteor.userId()) {
+      throw new Meteor.Error('not-authorized');
+    }
+    Todos.update(todoId, {$set:{checked: setChecked}});
   } 
 });
-
-if (Meteor.isServer) {
-  
-}
